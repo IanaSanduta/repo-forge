@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { getUserData, savePortfolioData } from '@/utils/supabase';
 
 interface Repository {
   id: number;
@@ -100,16 +101,68 @@ export default function RepositoriesPage() {
     });
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedRepos.length === 0) {
       alert('Please select at least one repository');
       return;
     }
     
-    // Store selected repositories in localStorage
-    localStorage.setItem('selectedRepos', JSON.stringify(
-      repositories.filter(repo => selectedRepos.includes(repo.id))
-    ));
+    // Store selected repositories in localStorage for the current session
+    const selectedRepositories = repositories.filter(repo => selectedRepos.includes(repo.id));
+    localStorage.setItem('selectedRepositories', JSON.stringify(selectedRepositories));
+    
+    // Also store in Supabase if the user exists there
+    if (user?.login) {
+      try {
+        // Check if user exists in Supabase
+        const userData = await getUserData(user.login);
+        
+        if (userData) {
+          // Get any existing portfolio data from localStorage
+          const colorSchemeData = localStorage.getItem('colorScheme');
+          const portfolioDetailsData = localStorage.getItem('portfolioDetails');
+          
+          let colorScheme = null;
+          let portfolioDetails = null;
+          
+          try {
+            if (colorSchemeData) {
+              colorScheme = JSON.parse(colorSchemeData);
+            }
+            
+            if (portfolioDetailsData) {
+              portfolioDetails = JSON.parse(portfolioDetailsData);
+            }
+          } catch (e) {
+            console.error('Failed to parse localStorage data:', e);
+          }
+          
+          // If we have at least repositories, save to Supabase
+          // Other data will be updated in later steps
+          if (selectedRepositories.length > 0) {
+            await savePortfolioData({
+              user_id: userData.id,
+              name: portfolioDetails?.name || 'My Portfolio',
+              description: portfolioDetails?.description || 'My GitHub portfolio',
+              repositories: selectedRepositories,
+              color_scheme: colorScheme || {
+                primary: '#3b82f6',
+                secondary: '#10b981',
+                accent: '#8b5cf6',
+                background: '#ffffff',
+                text: '#1f2937',
+                darkMode: false
+              },
+              template_id: 'default'
+            });
+            console.log('Repository selection saved to Supabase');
+          }
+        }
+      } catch (error) {
+        console.error('Error saving repository selection to Supabase:', error);
+        // Continue anyway since we have the data in localStorage
+      }
+    }
     
     // Navigate to the color selection page
     router.push('/github/customize');

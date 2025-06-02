@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { saveUserData } from '@/utils/supabase';
 
 export default function GitHubConnectPage() {
   const [token, setToken] = useState('');
@@ -29,9 +30,17 @@ export default function GitHubConnectPage() {
         throw new Error(data.error || 'Failed to authenticate with GitHub');
       }
 
-      // Store token in localStorage (in a real app, use a more secure method)
+      // Store token in localStorage for current session use
       localStorage.setItem('githubToken', token);
       localStorage.setItem('githubUser', JSON.stringify(data.user));
+      
+      // Also store in Supabase for persistence
+      await saveUserData({
+        github_token: token,
+        github_username: data.user.login,
+        github_avatar: data.user.avatar_url,
+        github_name: data.user.name
+      });
 
       // Redirect to repositories page
       router.push('/github/repositories');
@@ -43,12 +52,27 @@ export default function GitHubConnectPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 md:p-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">Connect to GitHub</h1>
-          <p className="text-gray-600 dark:text-gray-300 text-sm">
-            Connect your GitHub account to access and manage your repositories
+    <div className="max-w-4xl mx-auto px-4 py-16">
+      <h1 className="text-3xl font-bold mb-8 text-center">Connect to GitHub</h1>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-8">
+        <h2 className="text-xl font-semibold mb-4">Enter your GitHub Personal Access Token</h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
+          We need a GitHub Personal Access Token to access your repositories and create your portfolio.
+          Your token is stored securely and is only used to fetch your repositories and user information.
+        </p>
+        
+        <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 mb-6">
+          <h3 className="font-semibold text-yellow-800 dark:text-yellow-200">Required Permissions</h3>
+          <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-1">
+            Your token must have the following scopes:
+          </p>
+          <ul className="list-disc list-inside text-yellow-700 dark:text-yellow-300 text-sm mt-1 ml-2">
+            <li><strong>repo</strong> - Full control of private repositories</li>
+            <li><strong>workflow</strong> - Required for GitHub Pages deployment</li>
+          </ul>
+          <p className="text-yellow-700 dark:text-yellow-300 text-sm mt-2">
+            When creating your token on GitHub, make sure to check these permission scopes.
           </p>
         </div>
 

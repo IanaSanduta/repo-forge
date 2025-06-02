@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserData } from '@/utils/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
     // Validate the token by making a request to GitHub API
     const response = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `token ${token}`,
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'RepoForge'
       }
@@ -26,11 +27,41 @@ export async function POST(request: NextRequest) {
 
     const userData = await response.json();
     
-    // In a real app, you would store this token in a secure session/cookie
-    // For this demo, we'll just return the user data
+    // Check token scopes to ensure it has the necessary permissions
+    const scopesResponse = await fetch('https://api.github.com/rate_limit', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'RepoForge'
+      }
+    });
+    
+    // GitHub returns the scopes in the X-OAuth-Scopes header
+    const scopes = scopesResponse.headers.get('X-OAuth-Scopes') || '';
+    const scopeArray = scopes.split(',').map(scope => scope.trim());
+    
+    // Check if the token has the necessary scopes for deployment
+    const hasRepoScope = scopeArray.includes('repo') || scopeArray.includes('public_repo');
+    
+    if (!hasRepoScope) {
+      return NextResponse.json(
+        { 
+          error: 'Insufficient token permissions', 
+          message: 'Your token needs the "repo" or "public_repo" scope for GitHub Pages deployment.'
+        }, 
+        { status: 403 }
+      );
+    }
+    
+    // Check if user already exists in Supabase
+    const existingUser = await getUserData(userData.login);
+    
+    // Return user data with additional info about persistence and scopes
     return NextResponse.json({
       authenticated: true,
-      user: userData
+      user: userData,
+      persistedUser: existingUser !== null,
+      scopes: scopeArray
     });
   } catch (error) {
     console.error('GitHub authentication error:', error);

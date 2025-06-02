@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { getUserData, savePortfolioData, getPortfolioData } from '@/utils/supabase';
 
 interface Repository {
   id: number;
@@ -15,6 +16,15 @@ interface Repository {
   stargazers_count: number;
   forks_count: number;
   updated_at: string;
+}
+
+interface GithubUser {
+  login: string;
+  name?: string;
+  avatar_url?: string;
+  html_url?: string;
+  bio?: string;
+  email?: string;
 }
 
 interface ColorScheme {
@@ -34,12 +44,12 @@ export default function PreviewPage() {
   const [portfolioName, setPortfolioName] = useState('My Developer Portfolio');
   const [portfolioDescription, setPortfolioDescription] = useState('A showcase of my projects and skills');
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<GithubUser | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     // Get selected repositories from localStorage
-    const storedRepos = localStorage.getItem('selectedRepos');
+    const storedRepos = localStorage.getItem('selectedRepositories');
     const storedColorScheme = localStorage.getItem('colorScheme');
     const userData = localStorage.getItem('githubUser');
     
@@ -62,6 +72,25 @@ export default function PreviewPage() {
         } else if (parsedUser.login) {
           setPortfolioName(`${parsedUser.login}'s Portfolio`);
         }
+        
+        // Try to load portfolio details from Supabase
+        const loadFromSupabase = async () => {
+          try {
+            const userDbData = await getUserData(parsedUser.login);
+            if (userDbData) {
+              const portfolioData = await getPortfolioData(userDbData.id);
+              if (portfolioData) {
+                // Update portfolio name and description from Supabase if available
+                setPortfolioName(portfolioData.name);
+                setPortfolioDescription(portfolioData.description);
+              }
+            }
+          } catch (error) {
+            console.error('Error loading portfolio data from Supabase:', error);
+          }
+        };
+        
+        loadFromSupabase();
       }
     } catch (e) {
       console.error('Failed to parse stored data:', e);
@@ -69,14 +98,56 @@ export default function PreviewPage() {
     }
   }, [router]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setLoading(true);
     
-    // Store portfolio details
+    // Store portfolio details in localStorage
     localStorage.setItem('portfolioDetails', JSON.stringify({
       name: portfolioName,
       description: portfolioDescription
     }));
+    
+    // Also store in Supabase if user exists
+    if (user?.login) {
+      try {
+        const userDbData = await getUserData(user.login);
+        if (userDbData) {
+          // Get existing portfolio data
+          const existingPortfolio = await getPortfolioData(userDbData.id);
+          
+          // Get repositories and color scheme from localStorage
+          const storedRepos = localStorage.getItem('selectedRepositories');
+          const storedColorScheme = localStorage.getItem('colorScheme');
+          
+          let repositories = [];
+          let colorScheme = null;
+          
+          try {
+            if (storedRepos) repositories = JSON.parse(storedRepos);
+            if (storedColorScheme) colorScheme = JSON.parse(storedColorScheme);
+          } catch (e) {
+            console.error('Failed to parse stored data:', e);
+          }
+          
+          // Save updated portfolio data
+          await savePortfolioData({
+            user_id: userDbData.id,
+            name: portfolioName,
+            description: portfolioDescription,
+            repositories: repositories.length > 0 ? repositories : (existingPortfolio?.repositories || []),
+            color_scheme: colorScheme || existingPortfolio?.color_scheme,
+            template_id: existingPortfolio?.template_id || 'default',
+            deployment_url: existingPortfolio?.deployment_url,
+            github_pages_url: existingPortfolio?.github_pages_url
+          });
+          
+          console.log('Portfolio details saved to Supabase');
+        }
+      } catch (error) {
+        console.error('Error saving portfolio details to Supabase:', error);
+        // Continue anyway since we have the data in localStorage
+      }
+    }
     
     // Simulate generation process
     setTimeout(() => {

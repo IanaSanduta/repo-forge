@@ -11,10 +11,29 @@ export async function GET(request: NextRequest) {
     
     const token = authHeader.split(' ')[1];
     
-    // Fetch repositories from GitHub API
-    const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100', {
+    // First, get the authenticated user's username
+    const userResponse = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `token ${token}`,
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'RepoForge'
+      }
+    });
+    
+    if (!userResponse.ok) {
+      return NextResponse.json(
+        { error: 'Failed to fetch user information' }, 
+        { status: userResponse.status }
+      );
+    }
+    
+    const userData = await userResponse.json();
+    const username = userData.login;
+    
+    // Fetch only the user's own repositories (not ones they collaborate on)
+    const response = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100&type=owner`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'RepoForge'
       }
@@ -46,11 +65,23 @@ export async function GET(request: NextRequest) {
       stargazers_count: number;
       forks_count: number;
       open_issues_count: number;
+      owner: {
+        login: string;
+        id: number;
+        avatar_url: string;
+        html_url: string;
+      };
     }
+    
+    // Filter out forks and repositories that don't belong to the user
+    const filteredRepos = repositories.filter((repo: GitHubRepository) => 
+      // Only include repositories owned by the user and exclude forks unless specifically wanted
+      repo.owner.login === username && !repo.fork
+    );
     
     // Return simplified repository data
     return NextResponse.json({
-      repositories: repositories.map((repo: GitHubRepository) => ({
+      repositories: filteredRepos.map((repo: GitHubRepository) => ({
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
@@ -66,7 +97,8 @@ export async function GET(request: NextRequest) {
         stargazers_count: repo.stargazers_count,
         forks_count: repo.forks_count,
         open_issues_count: repo.open_issues_count
-      }))
+      })),
+      username: username
     });
   } catch (error) {
     console.error('Error fetching repositories:', error);

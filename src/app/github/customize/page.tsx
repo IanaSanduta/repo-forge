@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
+import { getUserData, savePortfolioData, getPortfolioData } from '@/utils/supabase';
 
 interface Repository {
   id: number;
@@ -41,23 +41,43 @@ export default function CustomizePage() {
   const [isCustom, setIsCustom] = useState(false);
   const router = useRouter();
 
-  const colorSchemes: ColorScheme[] = [
+  const colorSchemes = useMemo(() => [
     {
       id: 'modern',
       name: 'Modern Blue',
       primary: '#3b82f6',
-      secondary: '#10b981',
+      secondary: '#0ea5e9',
       accent: '#8b5cf6',
       background: '#ffffff',
       text: '#1f2937',
       darkMode: false,
     },
     {
-      id: 'dark',
-      name: 'Dark Mode',
-      primary: '#60a5fa',
-      secondary: '#34d399',
-      accent: '#a78bfa',
+      id: 'forest',
+      name: 'Forest Green',
+      primary: '#10b981',
+      secondary: '#059669',
+      accent: '#f59e0b',
+      background: '#ffffff',
+      text: '#1f2937',
+      darkMode: false,
+    },
+    {
+      id: 'sunset',
+      name: 'Sunset Orange',
+      primary: '#f97316',
+      secondary: '#ea580c',
+      accent: '#8b5cf6',
+      background: '#ffffff',
+      text: '#1f2937',
+      darkMode: false,
+    },
+    {
+      id: 'midnight',
+      name: 'Midnight',
+      primary: '#6366f1',
+      secondary: '#4f46e5',
+      accent: '#ec4899',
       background: '#111827',
       text: '#f9fafb',
       darkMode: true,
@@ -65,29 +85,9 @@ export default function CustomizePage() {
     {
       id: 'minimal',
       name: 'Minimal',
-      primary: '#4b5563',
-      secondary: '#6b7280',
-      accent: '#9ca3af',
-      background: '#f9fafb',
-      text: '#111827',
-      darkMode: false,
-    },
-    {
-      id: 'vibrant',
-      name: 'Vibrant',
-      primary: '#f43f5e',
-      secondary: '#ec4899',
-      accent: '#8b5cf6',
-      background: '#ffffff',
-      text: '#0f172a',
-      darkMode: false,
-    },
-    {
-      id: 'forest',
-      name: 'Forest',
-      primary: '#059669',
-      secondary: '#10b981',
-      accent: '#34d399',
+      primary: '#334155',
+      secondary: '#475569',
+      accent: '#0ea5e9',
       background: '#f8fafc',
       text: '#1e293b',
       darkMode: false,
@@ -102,11 +102,11 @@ export default function CustomizePage() {
       text: customColors.text,
       darkMode: false,
     },
-  ];
+  ], [customColors]);
 
   useEffect(() => {
     // Get selected repositories from localStorage
-    const storedRepos = localStorage.getItem('selectedRepos');
+    const storedRepos = localStorage.getItem('selectedRepositories');
     if (!storedRepos) {
       router.push('/github/repositories');
       return;
@@ -118,7 +118,81 @@ export default function CustomizePage() {
       console.error('Failed to parse selected repositories:', e);
       router.push('/github/repositories');
     }
-  }, [router]);
+    
+    // Check if we have a color scheme in localStorage from previous session
+    const storedColorScheme = localStorage.getItem('colorScheme');
+    if (storedColorScheme) {
+      try {
+        const parsedScheme = JSON.parse(storedColorScheme);
+        if (parsedScheme.id) {
+          setSelectedColorScheme(parsedScheme.id);
+          setIsCustom(parsedScheme.id === 'custom');
+          
+          if (parsedScheme.id === 'custom') {
+            setCustomColors({
+              primary: parsedScheme.primary || '#3b82f6',
+              secondary: parsedScheme.secondary || '#10b981',
+              accent: parsedScheme.accent || '#8b5cf6',
+              background: parsedScheme.background || '#ffffff',
+              text: parsedScheme.text || '#1f2937',
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse stored color scheme:', e);
+      }
+    }
+    
+    // Try to load from Supabase if user is logged in
+    const loadFromSupabase = async () => {
+      const userData = localStorage.getItem('githubUser');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          const user = await getUserData(parsedUser.login);
+          
+          if (user) {
+            const portfolioData = await getPortfolioData(user.id);
+            
+            if (portfolioData && portfolioData.color_scheme) {
+              // If we have color scheme data in Supabase, use it
+              const colorScheme = portfolioData.color_scheme;
+              
+              // Check if it's a predefined scheme or custom
+              const matchingScheme = colorSchemes.find(
+                scheme => scheme.id !== 'custom' && 
+                scheme.primary === colorScheme.primary &&
+                scheme.secondary === colorScheme.secondary &&
+                scheme.accent === colorScheme.accent
+              );
+              
+              if (matchingScheme) {
+                setSelectedColorScheme(matchingScheme.id);
+                setIsCustom(false);
+              } else {
+                setSelectedColorScheme('custom');
+                setIsCustom(true);
+                setCustomColors({
+                  primary: colorScheme.primary || '#3b82f6',
+                  secondary: colorScheme.secondary || '#10b981',
+                  accent: colorScheme.accent || '#8b5cf6',
+                  background: colorScheme.background || '#ffffff',
+                  text: colorScheme.text || '#1f2937',
+                });
+              }
+              
+              // Save to localStorage for consistency
+              localStorage.setItem('colorScheme', JSON.stringify(colorScheme));
+            }
+          }
+        } catch (error) {
+          console.error('Error loading color scheme from Supabase:', error);
+        }
+      }
+    };
+    
+    loadFromSupabase();
+  }, [router, colorSchemes]);
 
   const handleColorSchemeChange = (schemeId: string) => {
     setSelectedColorScheme(schemeId);
@@ -132,13 +206,61 @@ export default function CustomizePage() {
     }));
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // Store color scheme in localStorage
     const selectedScheme = isCustom 
       ? { ...colorSchemes.find(scheme => scheme.id === 'custom'), ...customColors }
       : colorSchemes.find(scheme => scheme.id === selectedColorScheme);
     
+    if (!selectedScheme) {
+      console.error('No color scheme selected');
+      return;
+    }
+    
     localStorage.setItem('colorScheme', JSON.stringify(selectedScheme));
+    
+    // Also store in Supabase if the user exists there
+    const userData = localStorage.getItem('githubUser');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        const user = await getUserData(parsedUser.login);
+        
+        if (user) {
+          // Get repositories from localStorage
+          const storedRepos = localStorage.getItem('selectedRepositories');
+          let repositories: Repository[] = [];
+          
+          try {
+            if (storedRepos) {
+              repositories = JSON.parse(storedRepos);
+            }
+          } catch (e) {
+            console.error('Failed to parse repositories:', e);
+          }
+          
+          // Get any existing portfolio data
+          const portfolioData = await getPortfolioData(user.id);
+          
+          // Update or create portfolio data with color scheme
+          await savePortfolioData({
+            user_id: user.id,
+            name: portfolioData?.name || 'My Portfolio',
+            description: portfolioData?.description || 'My GitHub portfolio',
+            repositories: repositories.length > 0 ? repositories : (portfolioData?.repositories || []),
+            color_scheme: selectedScheme as ColorScheme,
+            template_id: portfolioData?.template_id || 'default',
+            deployment_url: portfolioData?.deployment_url,
+            github_pages_url: portfolioData?.github_pages_url
+          });
+          
+          console.log('Color scheme saved to Supabase');
+        }
+      } catch (error) {
+        console.error('Error saving color scheme to Supabase:', error);
+        // Continue anyway since we have the data in localStorage
+      }
+    }
     
     // Navigate to the next step (preview or generation page)
     router.push('/github/preview');
