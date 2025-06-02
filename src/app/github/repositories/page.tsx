@@ -26,6 +26,7 @@ export default function RepositoriesPage() {
     name?: string;
     avatar_url: string;
   } | null>(null);
+  const [selectedRepos, setSelectedRepos] = useState<number[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -89,6 +90,31 @@ export default function RepositoriesPage() {
     });
   };
 
+  const toggleRepoSelection = (repoId: number) => {
+    setSelectedRepos(prev => {
+      if (prev.includes(repoId)) {
+        return prev.filter(id => id !== repoId);
+      } else {
+        return [...prev, repoId];
+      }
+    });
+  };
+
+  const handleContinue = () => {
+    if (selectedRepos.length === 0) {
+      alert('Please select at least one repository');
+      return;
+    }
+    
+    // Store selected repositories in localStorage
+    localStorage.setItem('selectedRepos', JSON.stringify(
+      repositories.filter(repo => selectedRepos.includes(repo.id))
+    ));
+    
+    // Navigate to the color selection page
+    router.push('/github/customize');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-73px)]">
@@ -146,7 +172,22 @@ export default function RepositoriesPage() {
         </div>
       )}
 
-      <h1 className="text-2xl font-bold mb-6">Your Repositories</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Select Repositories for Your Portfolio</h1>
+        <button
+          onClick={handleContinue}
+          disabled={selectedRepos.length === 0}
+          className={`px-6 py-2 rounded-md transition-colors ${selectedRepos.length === 0 
+            ? 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed text-gray-500 dark:text-gray-400' 
+            : 'bg-black dark:bg-white dark:text-black text-white hover:bg-gray-800 dark:hover:bg-gray-200'}`}
+        >
+          Continue ({selectedRepos.length} selected)
+        </button>
+      </div>
+      
+      <p className="text-gray-600 dark:text-gray-300 mb-6">
+        Choose the repositories you want to showcase in your portfolio website.
+      </p>
 
       {repositories.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
@@ -169,7 +210,25 @@ export default function RepositoriesPage() {
       ) : (
         <div className="grid gap-4">
           {repositories.map((repo) => (
-            <div key={repo.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-100 dark:border-gray-700">
+            <div 
+            key={repo.id} 
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border ${selectedRepos.includes(repo.id) 
+              ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500 dark:ring-blue-400' 
+              : 'border-gray-100 dark:border-gray-700'} 
+              cursor-pointer transition-all hover:border-blue-300 dark:hover:border-blue-600`}
+            onClick={() => toggleRepoSelection(repo.id)}
+          >
+            <div className="absolute top-4 right-4">
+              <div className={`w-6 h-6 rounded-full border ${selectedRepos.includes(repo.id) 
+                ? 'bg-blue-500 border-blue-500 dark:bg-blue-400 dark:border-blue-400' 
+                : 'border-gray-300 dark:border-gray-600'} flex items-center justify-center`}>
+                {selectedRepos.includes(repo.id) && (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </div>
               <div className="flex flex-col md:flex-row md:items-center justify-between">
                 <div className="mb-4 md:mb-0">
                   <div className="flex items-center mb-2">
