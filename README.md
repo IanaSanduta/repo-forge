@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔥 RepoForge
 
-## Getting Started
+**Transform your GitHub repositories into stunning portfolio websites in minutes.**
 
-First, run the development server:
+RepoForge automatically pulls your GitHub projects and generates beautiful, customizable portfolio sites that showcase your best work.
+
+## ✨ Features
+
+- 🔗 **GitHub Integration** - Connect and fetch your repositories instantly
+- 🎨 **Multiple Templates** - Choose from professional, modern, and creative designs
+- 🎯 **Smart Project Selection** - Pick and choose which repos to showcase
+- 🎨 **Full Customization** - Colors, fonts, contact info, and branding
+- 📱 **Responsive Design** - Looks perfect on all devices
+- ⚡ **One-Click Deploy** - Export or deploy to Vercel/Netlify instantly
+
+## 🚀 Quick Start
 
 ```bash
+# Clone and install
+git clone https://github.com/yourusername/repoforge.git
+cd repoforge
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Add your GitHub credentials
+
+# Start development
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Tech Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Next.js 14** - React framework with App Router
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first styling
+- **GitHub API** - Repository data fetching
+- **Lucide React** - Beautiful icons
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📋 Environment Variables
 
-## Learn More
+```env
+NEXT_PUBLIC_GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 🎯 Roadmap
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [ ] More template options
+- [ ] Custom domain support
+- [ ] Portfolio analytics
+- [ ] Team collaboration features
+- [ ] Integration with other Git providers
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🤝 Contributing
 
-## Deploy on Vercel
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📄 License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+**Made with ❤️ for developers who want to showcase their work beautifully.**
