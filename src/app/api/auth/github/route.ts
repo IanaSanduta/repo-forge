@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserData } from '@/utils/supabase';
 
+// For static export, we need to use error dynamic to indicate this can't be statically generated
+export const dynamic = "error";
+export const dynamicParams = true;
+// This route cannot be prerendered as it requires runtime request data
+
 export async function POST(request: NextRequest) {
   try {
     const { token } = await request.json();

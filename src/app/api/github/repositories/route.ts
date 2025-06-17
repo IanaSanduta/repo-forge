@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// For static export, we need to use error dynamic to indicate this can't be statically generated
+export const dynamic = "error";
+export const dynamicParams = true;
+// This route cannot be prerendered as it requires runtime request data
+
 export async function GET(request: NextRequest) {
   try {
     // Get the token from the Authorization header

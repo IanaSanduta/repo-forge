@@ -1,5 +1,5 @@
-import Image from 'next/image';
 import Link from 'next/link';
+import ClientImage from '@/components/ClientImage';
 
 interface TemplateProps {
   id: string;
@@ -93,25 +93,11 @@ export default function TemplatesPage() {
         {templates.map(template => (
           <div key={template.id} className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
             <div className="relative h-48 w-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-              {/* Use Next.js Image for template previews */}
-              <Image
+              {/* Use ClientImage component for template previews with error handling */}
+              <ClientImage
                 src={`/assets/templates/${template.id}.jpg`}
                 alt={`${template.name} template preview`}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover"
-                // Fallback for missing images
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    const fallback = document.createElement('div');
-                    fallback.className = 'absolute inset-0 flex items-center justify-center text-gray-500 dark:text-gray-400';
-                    fallback.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" /></svg>`;
-                    parent.appendChild(fallback);
-                  }
-                }}
               />
             </div>
             
